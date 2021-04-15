@@ -1,0 +1,4 @@
+download-youtube-subtitle==1.0.2
+pydub==0.24.1
+youtube-dl==2021.4.7
+more-itertools==8.7.0
