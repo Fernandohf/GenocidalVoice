@@ -69,7 +69,7 @@ if __name__ == "__main__":
         "--out", help="Output folder'", default=DATASET_OUT)
     parser.add_argument(
         "--partial",
-        help="Wether creates clips for all audio files or only files in 'bolsonaro.csv'",
+        help="Wether creates clips for all audio files or only files in 'bolsoanta.csv'",
         type=int,
         default=1)
     args = parser.parse_args()
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     if args.partial:
         data_source = AUDIO_IN + \
             pd.read_csv(
-                'data/bolsonaro.csv').urls.str.split("v=").str[-1] + ".m4a"
+                'data/bolsoanta.csv').urls.str.split("v=").str[-1] + ".m4a"
     else:
         data_source = map(lambda x: x.replace("\\", "/"), glob(AUDIO_IN + "*"))
 

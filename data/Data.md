@@ -11,7 +11,7 @@ All videos used in this projects were public.
 
 Data | Título | URL
 ---|---|---
-24/04/2020|Jair Bolsonaro no Palácio do Planalto|<https://www.youtube.com/watch?v=r50zxW-D7M0>
+24/04/2020|JB no Palácio do Planalto|<https://www.youtube.com/watch?v=r50zxW-D7M0>
 29/04/2016|Discurso antigo youtube|<https://www.youtube.com/watch?v=ytstUHk8rg4>
 10/04/2021|Venezuelanos |<https://www.youtube.com/watch?v=gVVbPj9U71g>
 09/04/2021|CPI Covid |<https://www.youtube.com/watch?v=pUc3WqQ4wJI>

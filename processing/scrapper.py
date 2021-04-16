@@ -3,7 +3,7 @@ import pandas as pd
 import download_youtube_subtitle.main as dys
 from youtube_dl import YoutubeDL
 
-VIDEOS_SOURCES = ['data/bolsonaro.csv', 'data/bolsonaro+.csv']
+VIDEOS_SOURCES = ['data/bolsoanta.csv', 'data/bolsoanta+.csv']
 AUDIO_OUT = 'data/raw/audio/'
 TEXT_OUT = 'data/raw/text/'
 
