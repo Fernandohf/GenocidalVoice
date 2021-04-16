@@ -72,3 +72,49 @@ Data | Título | URL
 14/05/2020|Live|<https://www.youtube.com/watch?v=S28DvOuB6cM>
 30/04/2020|Live|<https://www.youtube.com/watch?v=XceWFVE7QLc>
 23/04/2020|Live|<https://www.youtube.com/watch?v=VuMbYrq_ys4>
+
+# Sinônimos
+
+Boldo
+Bilonaro
+Biroliro
+Biroslau
+Biroslini
+Biruleibes
+Bobonaro
+Bolno
+Bololaro
+Bolonaro
+Bolossauro
+Bolovo
+Bolro
+Bolso
+Bolsoanta
+Bolsobitch
+Bolsobostão
+Bolsolini
+Bolsonabo
+Bolzonóquio
+Bolzy
+Bonobo
+Boslo
+Bostonauro
+Bostossauro
+Bozolino
+Bozonabo
+Bubobauro
+Burronaro
+Capetão
+Chihuahua do Trump
+Coisa
+Coiso
+Frouxonaro
+i[mito]
+J B
+Javier Bolsossauro
+Nalbossauro
+Pocket
+Salnorabo
+Silvonaro
+Soldado Bizonho
+Solnorabo
