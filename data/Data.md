@@ -1,12 +1,13 @@
 
 # Data
 
-This is were all the data acquisition occurs.
+This is were all the data is stored.
 
 ## Videos Sources
 
 All videos used in this projects were public.
-These are their sources:
+
+**These are their sources:**
 
 Data | Título | URL
 ---|---|---

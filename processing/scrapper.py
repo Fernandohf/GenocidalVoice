@@ -1,10 +1,9 @@
 import os
 import pandas as pd
 import download_youtube_subtitle.main as dys
-
 from youtube_dl import YoutubeDL
 
-VIDEOS_URLS = 'data/videos.csv'
+VIDEOS_SOURCES = ['data/bolsonaro.csv', 'data/bolsonaro+.csv']
 AUDIO_OUT = 'data/raw/audio/'
 TEXT_OUT = 'data/raw/text/'
 
@@ -41,5 +40,11 @@ if __name__ == "__main__":
     os.makedirs(AUDIO_OUT, exist_ok=True)
     os.makedirs(TEXT_OUT, exist_ok=True)
 
-    videos = load_videos(VIDEOS_URLS)
+    # Load and combine video sources
+    videos_df = []
+    for video in VIDEOS_SOURCES:
+        videos_df.append(load_videos(video))
+    videos = pd.concat(videos_df).drop_duplicates()
+
+    # Download files
     download_files(videos, AUDIO_OUT, TEXT_OUT)
