@@ -12,6 +12,7 @@ AUDIO_IN = 'data/raw/audio/'
 TEXT_IN = 'data/raw/text/'
 DATASET_NAME = 'genocida'
 DATASET_OUT = 'data/datasets/'
+DATASET_SOURCE = 'data/bolsoanta.csv'
 BIT_RATE = "32k"
 TARGET_SAMPLE_RATE = 22050
 
@@ -33,7 +34,6 @@ def split_fragments(text_file, audio_file, data_out, init_uid):
 
     # Load sound
     sound = AudioSegment.from_file(audio_file)
-
     fragments = []
     transcriptions = []
     ids = []
@@ -68,10 +68,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--out", help="Output folder'", default=DATASET_OUT)
     parser.add_argument(
-        "--partial",
-        help="Wether creates clips for all audio files or only files in 'bolsoanta.csv'",
-        type=int,
-        default=1)
+        "--source",
+        help="Source file with all files names",
+        default=DATASET_SOURCE)
     args = parser.parse_args()
 
     # Garantes folder exists
@@ -83,8 +82,8 @@ if __name__ == "__main__":
     # Progress bar
     if args.partial:
         data_source = AUDIO_IN + \
-            pd.read_csv(
-                'data/bolsoanta.csv').urls.str.split("v=").str[-1] + ".m4a"
+            pd.read_csv(args.source
+                ).urls.str.split("v=").str[-1] + ".m4a"
     else:
         data_source = map(lambda x: x.replace("\\", "/"), glob(AUDIO_IN + "*"))
 
@@ -93,8 +92,9 @@ if __name__ == "__main__":
     for audio_file in pbar:
         file_name = audio_file.split('/')[-1]
         # Check if subtitle exists
-        text_file = TEXT_IN + file_name.split(".")[0] + ".json"
-        if os.path.exists(TEXT_IN + file_name.split(".")[0] + ".json"):
+        file_no_ext = file_name.split(".")[0]
+        text_file = TEXT_IN + file_no_ext + ".json"
+        if os.path.exists(TEXT_IN + file_no_ext + ".json"):
             df, uid = split_fragments(text_file, audio_file, data_out, uid)
             total += df.shape[0]
             pbar.set_description(
