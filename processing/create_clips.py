@@ -2,19 +2,16 @@ import os
 import argparse
 import json
 import pandas as pd
-from glob import glob
 from tqdm import tqdm
 from more_itertools import pairwise
 from pydub import AudioSegment
 from pydub.effects import normalize
 
-AUDIO_IN = 'data/raw/audio/'
-TEXT_IN = 'data/raw/text/'
 DATASET_NAME = 'genocida'
 DATASET_OUT = 'data/datasets/'
 DATASET_SOURCE = 'data/bolsoanta.csv'
 BIT_RATE = "32k"
-TARGET_SAMPLE_RATE = 22050
+# TARGET_SAMPLE_RATE = 22050
 
 
 def fix_durations(subtitles_list):
@@ -79,13 +76,10 @@ if __name__ == "__main__":
     # List of Dataframes
     dfs = []
     uid = 0
-    # Progress bar
-    if args.partial:
-        data_source = AUDIO_IN + \
-            pd.read_csv(args.source
-                ).urls.str.split("v=").str[-1] + ".m4a"
-    else:
-        data_source = map(lambda x: x.replace("\\", "/"), glob(AUDIO_IN + "*"))
+    # Source
+    diretory = args.source.split(".")[0] + "/raw/"
+    data_source = (diretory + "audio/" +
+                   pd.read_csv(args.source).urls.str.split("v=").str[-1] + ".m4a")
 
     pbar = tqdm(data_source, desc="Processing files...")
     total = 0
@@ -93,8 +87,8 @@ if __name__ == "__main__":
         file_name = audio_file.split('/')[-1]
         # Check if subtitle exists
         file_no_ext = file_name.split(".")[0]
-        text_file = TEXT_IN + file_no_ext + ".json"
-        if os.path.exists(TEXT_IN + file_no_ext + ".json"):
+        text_file = diretory + "text/" + file_no_ext + ".json"
+        if os.path.exists(text_file):
             df, uid = split_fragments(text_file, audio_file, data_out, uid)
             total += df.shape[0]
             pbar.set_description(
@@ -102,6 +96,7 @@ if __name__ == "__main__":
             dfs.append(df)
         # Ignore audio without text
         else:
+            pbar.set_description(f"Ignoring {file_name} no subtitles found.")
             continue
     dataset = pd.concat(dfs).reset_index()
     dataset.to_csv(data_out + args.name + ".csv", encoding='utf8')

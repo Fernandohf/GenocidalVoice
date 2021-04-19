@@ -1,7 +1,7 @@
 
 # GenocidalVoice
 
- Syntetizador da voz de um Genocida.
+ Genocidal synthesizer.
 
 # Lista de afazeres
 
@@ -11,7 +11,15 @@
    - [x] Criar um dataset a partir dos vídeos
 2. Filtrar apenas falas de Salnorabo com um modelo de classificação
    - [x] Separar apenas as falas de Burronaro
-   - [ ] Coletar falas de outras pessoas
+   - [x] Coletar falas de outras pessoas
    - [ ] Criar/treinar modelo de classificação
    - [ ] Usar o novo modelo para separar apenas as falas de Bostonaro de todos os vídeos
 3. Treinar os modelos Wavenet / Waveglow
+
+## Commands
+
+```python processing/scrapper.py --source data/outros.csv --out data/outros/raw/```
+```python processing/scrapper.py --source data/bolsoanta.csv --out data/bolsoanta/raw/```
+
+```python processing/create_clips.py --name outros --source data/outros.csv```
+```python processing/create_clips.py --name bolsoanta --source data/bolsoanta.csv```

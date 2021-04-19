@@ -9,7 +9,7 @@ All videos used in this projects were public.
 
 **These are their sources:**
 
-Data | Título | URL
+Date | Description | URL
 ---|---|---
 24/04/2020|JB no Palácio do Planalto|<https://www.youtube.com/watch?v=r50zxW-D7M0>
 29/04/2016|Discurso antigo youtube|<https://www.youtube.com/watch?v=ytstUHk8rg4>

@@ -1,5 +1,7 @@
+.vscode/
 data/raw/
 data/datasets/
-data/dataset/
-.vscode/
+data/outros/
 
+research/.ipynb_checkpoints/
+data/bolsoanta/
