@@ -15,15 +15,32 @@ BIT_RATE = "32k"
 
 
 def fix_durations(subtitles_list):
+    """Fix duration in subtitles json
+
+    Args:
+        subtitles_list: List of dictionaries with subtitle info
+
+    Returns:
+        [list(dict)]: Fixed list of dictionaries
+    """
     for s1, s2 in pairwise(subtitles_list):
         s1['dur'] = str(float(s2['start']) - float(s1['start']))
     return subtitles_list
 
 
 def split_fragments(text_file, audio_file, data_out, init_uid):
-    """
-    Create the pairs phrases/transcription in the dataset formart
+    """Create the pairs phrases/transcription in the dataset format
     from given audio/text files
+
+    Args:
+        text_file (str): Path to text file
+        audio_file (str): Path to audio file
+        data_out (str): Path to dataset output
+        init_uid (int): Initial value for unique identifier
+
+    Returns:
+        metadata: Dataframe with all info of the dataset
+        uid (int): Last used unique identifier
     """
     # Load subtitle
     text = json.load(open(text_file, encoding='utf8'))

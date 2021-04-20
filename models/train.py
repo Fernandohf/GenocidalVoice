@@ -8,7 +8,7 @@ def train_epoch(model, epoch, criterion, optimizer, dataloader, device, print_ve
     """Trains the model for 1 epoch
 
     Args:
-        model: Pytorch model to be trained
+        model: Pytorch model being trained
         criterion: Loss function
         optimizer: Optimizer used in the training
         dataloader: Dataloader for training data
@@ -18,6 +18,7 @@ def train_epoch(model, epoch, criterion, optimizer, dataloader, device, print_ve
 
     """
     model.train()
+    model.to(device)
     for batch_idx, (data, target) in enumerate(dataloader):
         optimizer.zero_grad()
         data = data.to(device)
@@ -35,6 +36,13 @@ def train_epoch(model, epoch, criterion, optimizer, dataloader, device, print_ve
 
 
 def test_binary_classification(model, dataloader, device):
+    """Test the model for a binary classification task
+
+    Args:
+        model: Pytorch model being tested
+        dataloader: Dataloader for testing data
+        device: Where the model is being trained
+    """
     model.eval()
     model.to(device)
     predictions = []
