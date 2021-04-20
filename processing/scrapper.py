@@ -14,8 +14,8 @@ def download_files(videos, audio_out, text_out):
                'outtmpl': audio_out + '%(id)s.%(ext)s',
                'nooverwrites': True, }
     audio_downloader = YoutubeDL(options)
-    for _, url in videos.items():
-        print(f"Saving video/text from {_}")
+    for i, url in videos.items():
+        print(f"Saving video/text from {i}")
         try:
             video_id = url.split("v=")[-1]
             audio_downloader.extract_info(url)
