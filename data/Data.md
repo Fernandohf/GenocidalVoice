@@ -105,7 +105,6 @@ Bozonabo
 Bubobauro
 Burronaro
 Capetão
-Chihuahua do Trump
 Coisa
 Coiso
 Frouxonaro

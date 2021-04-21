@@ -5,7 +5,7 @@ import download_youtube_subtitle.main as dys
 from youtube_dl import YoutubeDL
 
 VIDEOS_SOURCE = 'data/bolsoanta.csv'
-OUTPUT = 'data/raw/'
+OUTPUT = 'data/datasets/'
 
 
 def download_files(videos, audio_out, text_out):
@@ -24,7 +24,6 @@ def download_files(videos, audio_out, text_out):
 
         except NameError:
             print("No caption available for this videos. Skipping...")
-            pass
 
 
 if __name__ == "__main__":
@@ -36,8 +35,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Garantes that the directories exist
-    os.makedirs(args.out + "audio/", exist_ok=True)
-    os.makedirs(args.out + "text/", exist_ok=True)
+    dataset_name = args.source.split("/")[-1].split(".")[0]
+    os.makedirs(args.out + dataset_name + "/raw/audio/", exist_ok=True)
+    os.makedirs(args.out + dataset_name + "/raw/text/", exist_ok=True)
 
     # Load and combine video sources
     if os.path.isfile(args.source):

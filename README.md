@@ -19,12 +19,14 @@
 ## Commands
 
 1. Download raw audio/subtitles files:
-```python processing/scrapper.py --source data/outros.csv --out data/outros/raw/```
-```python processing/scrapper.py --source data/bolsoanta.csv --out data/bolsoanta/raw/```
+```python processing/scrapper.py --source data/outros.csv```
+```python processing/scrapper.py --source data/bolsoanta.csv```
+```python processing/scrapper.py --source data/ChihuahuaDoTrump.csv```
 
 2. Organize audio/subtitles files in a dataset format:
-```python processing/create_clips.py --name outros --source data/outros.csv```
-```python processing/create_clips.py --name bolsoanta --source data/bolsoanta.csv```
+```python processing/create_clips.py --dataset data/datasets/outros```
+```python processing/create_clips.py --dataset data/datasets/bolsoanta```
+```python processing/create_clips.py --dataset data/datasets/ChihuahuaDoTrump```
 
 3. Create model for classification
 ```todo```

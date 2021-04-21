@@ -1,15 +1,13 @@
 import os
 import argparse
 import json
+import glob
 import pandas as pd
 from tqdm import tqdm
 from more_itertools import pairwise
 from pydub import AudioSegment
 from pydub.effects import normalize
 
-DATASET_NAME = 'genocida'
-DATASET_OUT = 'data/datasets/'
-DATASET_SOURCE = 'data/bolsoanta.csv'
 BIT_RATE = "32k"
 # TARGET_SAMPLE_RATE = 22050
 
@@ -65,7 +63,7 @@ def split_fragments(text_file, audio_file, data_out, init_uid):
         ids.append(str_id)
         fragments.append(fragment)
         transcriptions.append(sentence['text'])
-        fragment.export(data_out + "wav/" + str_id + ".wav",
+        fragment.export(os.path.join(data_out, "wav", str_id + ".wav"),
                         format="wav", bitrate=BIT_RATE)
 
     # Create dataset
@@ -78,35 +76,30 @@ def split_fragments(text_file, audio_file, data_out, init_uid):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", help="Dataset's name", default=DATASET_NAME)
     parser.add_argument(
-        "--out", help="Output folder'", default=DATASET_OUT)
-    parser.add_argument(
-        "--source",
-        help="Source file with all files names",
-        default=DATASET_SOURCE)
+        "--dataset",
+        help="Folder contaning the audio/text files downloaded")
     args = parser.parse_args()
 
     # Garantes folder exists
-    os.makedirs(DATASET_OUT + args.name + "/wav/", exist_ok=True)
-    data_out = DATASET_OUT + args.name + "/"
+    audio_path = os.path.join(args.dataset, "raw", "audio")
+    os.makedirs(audio_path, exist_ok=True)
+    os.makedirs(os.path.join(args.dataset, "wav"), exist_ok=True)
     # List of Dataframes
     dfs = []
     uid = 0
     # Source
-    diretory = args.source.split(".")[0] + "/raw/"
-    data_source = (diretory + "audio/" +
-                   pd.read_csv(args.source).urls.str.split("v=").str[-1] + ".m4a")
-
-    pbar = tqdm(data_source, desc="Processing files...")
+    audio_source = glob.glob(audio_path + "/*")
+    pbar = tqdm(audio_source, desc="Processing files...")
     total = 0
     for audio_file in pbar:
-        file_name = audio_file.split('/')[-1]
+        file_name = os.path.basename(audio_file)
         # Check if subtitle exists
         file_no_ext = file_name.split(".")[0]
-        text_file = diretory + "text/" + file_no_ext + ".json"
+        text_file = os.path.join(
+            args.dataset, "raw", "text", file_no_ext + ".json")
         if os.path.exists(text_file):
-            df, uid = split_fragments(text_file, audio_file, data_out, uid)
+            df, uid = split_fragments(text_file, audio_file, args.dataset, uid)
             total += df.shape[0]
             pbar.set_description(
                 f"{file_name} added {df.shape[0]}/{total} fragments to dataset")
@@ -116,4 +109,6 @@ if __name__ == "__main__":
             pbar.set_description(f"Ignoring {file_name} no subtitles found.")
             continue
     dataset = pd.concat(dfs).reset_index()
-    dataset.to_csv(data_out + args.name + ".csv", encoding='utf8')
+    dataset.to_csv(os.path.join(
+        args.dataset, os.path.basename(os.path.normpath(args.dataset)) + ".csv"),
+        encoding='utf8')

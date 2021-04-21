@@ -1,10 +1,22 @@
 """ Functions for traning a model"""
+import os
+import glob
 import torch
-from sklearn.metrics import f1_score, accuracy_score
 import numpy as np
+from sklearn.metrics import f1_score, accuracy_score
+
+CHECKPOINT_PATH = 'checkpoint'
 
 
-def train_epoch(model, epoch, criterion, optimizer, dataloader, device, print_very=20):
+def last_checkpoint(path):
+    checkpoints = {}
+    for checkpoint in glob.glob(path + "/*"):
+        score = float(checkpoints.split("_")[-1].strip(".pt"))
+        checkpoints[checkpoint] = score
+    return max(checkpoint, key=checkpoints.get)
+
+
+def train_epoch(model, epoch, criterion, optimizer, dataloader, device, print_very=10):
     """Trains the model for 1 epoch
 
     Args:
@@ -33,6 +45,7 @@ def train_epoch(model, epoch, criterion, optimizer, dataloader, device, print_ve
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\t\t Loss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(dataloader.dataset),
                 100. * batch_idx / len(dataloader.dataset), loss))
+    return loss.cpu()
 
 
 def test_binary_classification(model, dataloader, device):
@@ -57,6 +70,8 @@ def test_binary_classification(model, dataloader, device):
     # Show stats
     predictions = np.concatenate(predictions)
     labels = np.concatenate(labels)
+    score = f1_score(labels, predictions)
     print(f'''\nTestset metrics ({len(dataloader.dataset)} samples)\n
              Accuracy: \t {accuracy_score(labels, predictions)*100:.2f}%\n
-             F1-score: \t {f1_score(labels, predictions):.2f}''')
+             F1-score: \t {score:.2f}''')
+    return score
