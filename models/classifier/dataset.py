@@ -59,10 +59,9 @@ class GenocidalClassifierDataset(Dataset):
         data_1["source"] = (self.DATA_SOURCE +
                             label_1_csv.split("/")[-1].split(".")[0] +
                             "/wav/" + data_1["id"] + ".wav")
-        # Avoid data unbalance
-        min_ = min(len(data_0), len(data_1))
-        data_0 = data_0.iloc[:min_]
-        data_1 = data_1.iloc[:min_]
+
+        # Keep expected data unbalance 80% positives
+        data_0 = data_0.iloc[:int(len(data_1)*.75)]
 
         # Combine and Split train/test
         index_0 = int(len(data_0) * split)
@@ -75,6 +74,8 @@ class GenocidalClassifierDataset(Dataset):
                 [data_0.iloc[index_0:], data_1.iloc[index_1:]])
         else:
             raise Exception("Invalid value of split, [-1 < split < 1]")
+        # Remove possible duplicates
+        self.data = self.data.drop_duplicates()
 
     def __getitem__(self, index):
         audio_file = self.data["source"].iloc[index]
@@ -82,6 +83,38 @@ class GenocidalClassifierDataset(Dataset):
             audio_file, self.resample, self.n_mels)
 
         return melspectogram_db, self.data["label"].iloc[index]
+
+    def __len__(self):
+        return len(self.data)
+
+
+class GenocidalPredictionDataset(Dataset):
+    DATA_SOURCE = 'D:/ARQUIVOS PESSOAIS/GitHub/GenocidalVoice/data/datasets/'
+
+    def __init__(self, metadata_csv, resample_freq=22050,
+                 n_mels=64, split=1):
+
+        self.n_mels = n_mels
+        self.resample = resample_freq
+        # Load data
+        data = pd.read_csv(os.path.relpath(metadata_csv),
+                           header=0, dtype=str).reset_index(drop=True)
+
+        # Add source path
+        basename = os.path.basename(os.path.normpath(metadata_csv))
+        data["source"] = (self.DATA_SOURCE +
+                          basename.split(".")[0] + "/wav/" +
+                          data["id"] + ".wav")
+
+        # Remove possible duplicates
+        self.data = data.drop_duplicates()
+
+    def __getitem__(self, index):
+        audio_file = self.data["source"].iloc[index]
+        sound_tensor, melspectogram_db = prepare_audio(
+            audio_file, self.resample, self.n_mels)
+
+        return index, self.data["source"].iloc[index], melspectogram_db
 
     def __len__(self):
         return len(self.data)

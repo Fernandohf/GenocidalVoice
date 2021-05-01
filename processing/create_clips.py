@@ -8,8 +8,9 @@ from more_itertools import pairwise
 from pydub import AudioSegment
 from pydub.effects import normalize
 
+DATASET_FOLDER = "data/datasets/ChihuahuaDoTrump"
 BIT_RATE = "32k"
-# TARGET_SAMPLE_RATE = 22050
+TARGET_SAMPLE_RATE = 22050
 
 
 def fix_durations(subtitles_list):
@@ -46,7 +47,6 @@ def split_fragments(text_file, audio_file, data_out, init_uid):
 
     # Load sound
     sound = AudioSegment.from_file(audio_file)
-    fragments = []
     transcriptions = []
     ids = []
     uid = init_uid
@@ -61,10 +61,12 @@ def split_fragments(text_file, audio_file, data_out, init_uid):
         uid += 1
         str_id = "{:0>6}".format(uid)
         ids.append(str_id)
-        fragments.append(fragment)
         transcriptions.append(sentence['text'])
+        # Frame rate
+        fragment = fragment.set_frame_rate(TARGET_SAMPLE_RATE).set_channels(1)
+
         fragment.export(os.path.join(data_out, "wav", str_id + ".wav"),
-                        format="wav", bitrate=BIT_RATE)
+                        format="wav", bitrate=BIT_RATE, )
 
     # Create dataset
     metadata = pd.DataFrame(columns=["id", "transcription"])
@@ -78,7 +80,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
-        help="Folder contaning the audio/text files downloaded")
+        help="Folder contaning the audio/text files downloaded",
+        default=DATASET_FOLDER)
     args = parser.parse_args()
 
     # Garantes folder exists

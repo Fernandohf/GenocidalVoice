@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from models.classifier.dataset import prepare_audio
 
 
 class GenocidalClassifier(nn.Module):
@@ -27,6 +26,7 @@ class GenocidalClassifier(nn.Module):
 
     def load_model(self, checkpoint):
         self.model.load_state_dict(torch.load(checkpoint))
+        self.model.cpu()
 
     def forward(self, x):
         output = self.model(x)
@@ -35,7 +35,8 @@ class GenocidalClassifier(nn.Module):
     def save_model(self, path="model.pt"):
         torch.save(self.model.state_dict(), path)
 
-    def is_genocidal(self, audio_path):
-        _, spec = prepare_audio(audio_path)
-        out = self.model(spec)
-        return (torch.sigmoid(out) > .5).cpu().numpy()
+    def is_genocidal(self, batch, thresh=.5):
+        with torch.no_grad():
+            out = self.model(batch)
+            pred = (torch.sigmoid(out)).cpu().numpy()
+            return (pred > thresh, pred)

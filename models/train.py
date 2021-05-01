@@ -1,19 +1,34 @@
 """ Functions for traning a model"""
 import os
+import time
 import glob
 import torch
 import numpy as np
 from sklearn.metrics import f1_score, accuracy_score
 
-CHECKPOINT_PATH = 'checkpoint'
-
 
 def last_checkpoint(path):
     checkpoints = {}
-    for checkpoint in glob.glob(path + "/*"):
-        score = float(checkpoints.split("_")[-1].strip(".pt"))
+    for checkpoint in glob.glob(path + "/*.pt"):
+        score = float(checkpoint.split("_")[-1].strip(".pt"))
         checkpoints[checkpoint] = score
-    return max(checkpoint, key=checkpoints.get)
+    if len(checkpoints) > 0:
+        best = max(checkpoints, key=checkpoints.get)
+    else:
+        best = None
+    return best
+
+
+def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
+    torch.save(
+        {
+            "iteration": iteration,
+            "state_dict": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "learning_rate": learning_rate,
+        },
+        filepath,
+    )
 
 
 def train_epoch(model, epoch, criterion, optimizer, dataloader, device, print_very=10):
@@ -60,18 +75,96 @@ def test_binary_classification(model, dataloader, device):
     model.to(device)
     predictions = []
     labels = []
-    for (data, target) in dataloader:
-        data = data.to(device)
-        target = torch.unsqueeze(target.to(device), 1).to(torch.float32)
-        output = torch.sigmoid(model(data))
-        pred = (output > .5)
-        predictions.append(torch.squeeze(pred).cpu().numpy().astype(int))
-        labels.append(torch.squeeze(target).cpu().numpy())
-    # Show stats
-    predictions = np.concatenate(predictions)
-    labels = np.concatenate(labels)
-    score = f1_score(labels, predictions)
-    print(f'''\nTestset metrics ({len(dataloader.dataset)} samples)\n
-             Accuracy: \t {accuracy_score(labels, predictions)*100:.2f}%\n
-             F1-score: \t {score:.2f}''')
+    with torch.no_grad():
+        for (data, target) in dataloader:
+            data = data.to(device)
+            target = torch.unsqueeze(target.to(device), 1).to(torch.float32)
+            output = torch.sigmoid(model(data))
+            pred = (output > .5)
+            predictions.append(torch.squeeze(pred).cpu().numpy().astype(int))
+            labels.append(torch.squeeze(target).cpu().numpy())
+        # Show stats
+        predictions = np.concatenate(predictions)
+        labels = np.concatenate(labels)
+        score = f1_score(labels, predictions)
+        print(f'''\nTestset metrics ({len(dataloader.dataset)} samples)\n
+                Accuracy: \t {accuracy_score(labels, predictions)*100:.2f}%\n
+                F1-score: \t {score:.2f}%''')
     return score
+
+
+def test_synthesizer(model, val_loader, criterion, iteration):
+    model.eval()
+    with torch.no_grad():
+        val_loss = 0.0
+        for i, batch in enumerate(val_loader):
+            x, y = model.parse_batch(batch)
+            y_pred = model(x)
+            loss = criterion(y_pred, y)
+            reduced_val_loss = loss.item()
+            val_loss += reduced_val_loss
+        val_loss = val_loss / (i + 1)
+
+    model.train()
+    print("Validation loss {}: {:9f}  ".format(iteration, val_loss))
+
+
+def train_synthesizer_epoch(
+    model,
+    train_loader,
+    val_loader,
+    optimizer,
+    criterion,
+    epoch,
+    output_directory,
+    learning_rate=3.125e-5,
+    grad_clip_thresh=1.0,
+    checkpoint_path=None,
+    batch_size=16,
+    iters_per_checkpoint=1000,
+):
+    iteration = 0
+    for _, batch in enumerate(train_loader):
+        start = time.perf_counter()
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = learning_rate
+
+        model.zero_grad()
+        x, y = model.parse_batch(batch)
+        y_pred = model(x)
+
+        loss = criterion(y_pred, y)
+        reduced_loss = loss.item()
+        loss.backward()
+
+        grad_norm = torch.nn.utils.clip_grad_norm_(
+            model.parameters(), grad_clip_thresh)
+        optimizer.step()
+
+        duration = time.perf_counter() - start
+        print(
+            "Status - [Epoch {}: Iteration {}] Train loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
+                epoch, iteration, reduced_loss, grad_norm, duration
+            )
+        )
+
+        if iteration % iters_per_checkpoint == 0:
+            test_synthesizer(model, val_loader, criterion, iteration)
+            checkpoint_path = os.path.join(
+                output_directory, "checkpoint_{}".format(iteration))
+            save_checkpoint(model, optimizer, learning_rate,
+                            iteration, checkpoint_path)
+            print(
+                "Saving model and optimizer state at iteration {} to {}".format(
+                    iteration, checkpoint_path)
+            )
+
+        iteration += 1
+
+    test_synthesizer(model, val_loader, criterion, iteration)
+    checkpoint_path = os.path.join(
+        output_directory, "checkpoint_{}".format(iteration))
+    save_checkpoint(model, optimizer, learning_rate,
+                    iteration, checkpoint_path)
+    print("Saving model and optimizer state at iteration {} to {}".format(
+        iteration, checkpoint_path))

@@ -30,3 +30,12 @@
 
 3. Create model for classification
 ```todo```
+
+4. Create Synthesizer
+```python processing/create_clips.py --dataset data/datasets/ChihuahuaDoTrump```
+
+# References
+
+1. [Voice Cloning App](https://github.com/BenAAndrew/Voice-Cloning-App)
+2. [Nvidia - Waveglow]()
+3. [Nvidia - Tacotron]()
