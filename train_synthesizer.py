@@ -1,4 +1,5 @@
 import os
+from glob import glob
 import torch
 import random
 import pandas as pd
@@ -6,7 +7,7 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 from argparse import ArgumentParser
 from models.synthesizer.text_cleaning import clean_text_series
-from models.train import train_synthesizer_epoch
+from models.train import train_synthesizer_epoch, load_checkpoint
 from models.synthesizer.dataset import VoiceDataset
 from tacotron2_model import Tacotron2, TextMelCollate, Tacotron2Loss
 
@@ -35,13 +36,13 @@ if __name__ == "__main__":
     os.makedirs(args.out, exist_ok=True)
 
     # Hyper-params
-    batch_size = 64
+    batch_size = 8
     learning_rate = 3.125e-5 * batch_size
     train_size = 0.8
     weight_decay = 1e-6
     grad_clip_thresh = 1.0
-    iters_per_checkpoint = 1000
-    epochs = 8000
+    iters_per_checkpoint = 500
+    epochs = 10
     seed = 1234
     # symbols = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     print(
@@ -55,10 +56,21 @@ if __name__ == "__main__":
 
     # Load model & optimizer
     print("Loading model...")
+    checkpoints = list(glob(args.out + "/*"))
     model = Tacotron2().cuda()
     optimizer = Adam(
         model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     criterion = Tacotron2Loss()
+    if len(checkpoints):
+        checkpoint_path = sorted(
+            checkpoints, key=lambda x: int(x.split("_")[-1]))[-1]
+        model, optimizer, iteration = load_checkpoint(
+            checkpoint_path, model, optimizer)
+        iteration += 1
+        print("Loaded checkpoint '{}' from iteration {}".format(
+            checkpoint_path, iteration))
+    else:
+        iteration = 0
     print("Loaded model")
 
     # Load data
@@ -67,7 +79,7 @@ if __name__ == "__main__":
     data = pd.read_csv(args.metadata, header=0, dtype=str)
     data["transcription"] = clean_text_series(data.transcription)
     valid_data = data[data["valid"] == "True"]
-    valid_data["source"] = "wav/" + valid_data["id"] + ".wav"
+    valid_data.loc[:, "source"] = "wav/" + valid_data.loc[:, "id"] + ".wav"
     # Keep same format of old code
     filepaths_and_text = [(s.source, s.transcription)
                           for idx, s in valid_data.iterrows()]
@@ -89,18 +101,17 @@ if __name__ == "__main__":
 
     # Data loaders
     train_loader = DataLoader(
-        trainset, num_workers=1, sampler=None, batch_size=batch_size,
-        pin_memory=True, collate_fn=collate_fn
+        trainset, num_workers=4, sampler=None, batch_size=batch_size,
+        pin_memory=True, collate_fn=collate_fn, shuffle=True,
     )
     val_loader = DataLoader(
-        valset, num_workers=1, sampler=None, batch_size=batch_size,
-        pin_memory=True, collate_fn=collate_fn
+        valset, num_workers=4, sampler=None, batch_size=batch_size,
+        pin_memory=True, collate_fn=collate_fn, shuffle=True
     )
     print("Loaded data")
 
     # Training
     # Load checkpoint if one exists
-    iteration = 0
 
     model.train()
     for epoch in range(1, epochs):
@@ -111,12 +122,12 @@ if __name__ == "__main__":
             optimizer,
             criterion,
             epoch,
+            iteration=iteration,
             output_directory=args.out,
-            learning_rate=3.125e-5,
-            grad_clip_thresh=1.0,
+            learning_rate=learning_rate,
+            grad_clip_thresh=grad_clip_thresh,
             checkpoint_path=None,
-            batch_size=16,
-            iters_per_checkpoint=1000,)
+            iters_per_checkpoint=iters_per_checkpoint)
 
         print("Epoch: {}".format(epoch))
         print(f"Progress - {epoch}/{epochs}")

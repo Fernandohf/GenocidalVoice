@@ -8,3 +8,5 @@ data/bolsoanta/
 **/__pycache__/
 data/ChihuahuaDoTrump/
 checkpoint/
+models/waveglow/waveglow_256channels_universal_v5.pt
+models/synthesizer/trained/*

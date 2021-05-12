@@ -7,6 +7,14 @@ import numpy as np
 from sklearn.metrics import f1_score, accuracy_score
 
 
+def load_checkpoint(checkpoint_path, model, optimizer):
+    checkpoint_dict = torch.load(checkpoint_path, map_location="cpu")
+    model.load_state_dict(checkpoint_dict["state_dict"])
+    optimizer.load_state_dict(checkpoint_dict["optimizer"])
+    iteration = checkpoint_dict["iteration"]
+    return model, optimizer, iteration
+
+
 def last_checkpoint(path):
     checkpoints = {}
     for checkpoint in glob.glob(path + "/*.pt"):
@@ -117,13 +125,12 @@ def train_synthesizer_epoch(
     criterion,
     epoch,
     output_directory,
+    iteration,
     learning_rate=3.125e-5,
     grad_clip_thresh=1.0,
     checkpoint_path=None,
-    batch_size=16,
     iters_per_checkpoint=1000,
 ):
-    iteration = 0
     for _, batch in enumerate(train_loader):
         start = time.perf_counter()
         for param_group in optimizer.param_groups:

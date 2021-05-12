@@ -43,8 +43,16 @@ REPLACEMENTS = {
 
 
 def replace_numbers(text):
-    return " ".join([num2words(txt, lang="pt-br") if txt.isdigit() else txt for txt in text.split(" ")])
+    text = " ".join([num2words(txt, lang="pt-br") if txt.isdigit() else txt for txt in text.split(" ")])
+    return text.translate({ord(k): None for k in "0123456789"})
 
+def clean_text(text):
+    for k, v in REPLACEMENTS.items():
+        text = text.replace(k, v)
+    text = replace_numbers(text)
+    text = text.strip()
+    text = text.lower()
+    return text
 
 def clean_text_series(text_series):
     # Fix values
