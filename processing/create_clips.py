@@ -52,12 +52,12 @@ def split_fragments(text_file, audio_file, data_out, init_uid):
     uid = init_uid
     # Splitting by text sentence
     for sentence in fixed_text:
-        silence = AudioSegment.silent(duration=100)
+        # silence = AudioSegment.silent(duration=100)
         start = int(float(sentence['start']) * 1000) - 300
         end = int(float(sentence['start']) * 1000 +
                   float(sentence['dur']) * 1000)
         # Add 100ms silent around audio
-        fragment = normalize(silence + sound[start:end] + silence)
+        fragment = normalize(sound[start:end])
         uid += 1
         str_id = "{:0>6}".format(uid)
         ids.append(str_id)
