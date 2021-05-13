@@ -1,15 +1,17 @@
 import os
-from glob import glob
 import torch
 import random
 import wandb
 import pandas as pd
+import matplotlib.pyplot as plt
 from torch.optim import Adam
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from argparse import ArgumentParser
 from models.synthesizer.text_cleaning import clean_text_series
-from models.train import train_synthesizer_epoch, load_checkpoint
+from models.train import train_synthesizer_epoch, load_checkpoint, get_last_checkpoint
 from models.synthesizer.dataset import VoiceDataset
+from synthesize import save_alignments
 from tacotron2_model import Tacotron2, TextMelCollate, Tacotron2Loss
 
 
@@ -37,41 +39,47 @@ if __name__ == "__main__":
     os.makedirs(args.out, exist_ok=True)
 
     # Hyper-params
-    batch_size = 8
-    learning_rate = 3.125e-5 * batch_size
-    train_size = 0.8
-    weight_decay = 1e-6
-    grad_clip_thresh = 1.0
-    iters_per_checkpoint = 500
-    epochs = 10
-    seed = 1234
-    # symbols = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    # CONFIGURATIONS
+    wandb.init(project='genocidal_voice', entity='fernandohf', resume=True)
+    config = wandb.config
+    config.batch_size = 16
+    config.learning_rate = 3.125e-5 * config.batch_size
+    config.train_size = 0.8
+    config.weight_decay = 1e-6
+    config.grad_clip_thresh = 1.0
+    config.iters_per_checkpoint = 500
+    config.epochs = 100
+    config.seed = 1234
+
     print(
-        f"Setting batch size to {batch_size}, learning rate to {learning_rate}."
+        f"Setting batch size to {config.batch_size}, learning rate to {config.learning_rate}."
     )
 
     # Set seed
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    random.seed(seed)
+    torch.manual_seed(config.seed)
+    torch.cuda.manual_seed(config.seed)
+    random.seed(config.seed)
 
     # Load model & optimizer
     print("Loading model...")
-    checkpoints = list(glob(args.out + "/*"))
     model = Tacotron2().cuda()
-    optimizer = Adam(
-        model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     criterion = Tacotron2Loss()
-    if len(checkpoints):
-        checkpoint_path = sorted(
-            checkpoints, key=lambda x: int(x.split("_")[-1]))[-1]
-        model, optimizer, iteration = load_checkpoint(
-            checkpoint_path, model, optimizer)
+    optimizer = Adam(
+        model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
+
+    last_checkpoint = get_last_checkpoint(args.out)
+    if last_checkpoint is not None:
+        model, optimizer, iteration, initial_epoch, learning_rate = load_checkpoint(
+            last_checkpoint, model, optimizer)
         iteration += 1
-        print("Loaded checkpoint '{}' from iteration {}".format(
-            checkpoint_path, iteration))
+        print(
+            f"Loaded checkpoint '{last_checkpoint}' from iteration {iteration}")
     else:
         iteration = 0
+        initial_epoch = 1
+        learning_rate = config.learning_rate
+
+    scheduler = StepLR(optimizer, step_size=10, gamma=.5, last_epoch=initial_epoch)
     print("Loaded model")
 
     # Load data
@@ -79,43 +87,41 @@ if __name__ == "__main__":
     print("Loading data...")
     data = pd.read_csv(args.metadata, header=0, dtype=str)
     data["transcription"] = clean_text_series(data.transcription)
+    # Filter invalid data
     valid_data = data[data["valid"] == "True"]
     valid_data.loc[:, "source"] = "wav/" + valid_data.loc[:, "id"] + ".wav"
     # Keep same format of old code
     filepaths_and_text = [(s.source, s.transcription)
                           for idx, s in valid_data.iterrows()]
-    # Filter invalid data
-
-    # with open(metadata_path, encoding="utf-8") as f:
-    #     filepaths_and_text = [line.strip().split("|") for line in f]
-    symbols = "".join(sorted(set(" ".join(valid_data.transcription))))
+    # Check symbols
+    config.symbols = ' abcdefghijklmnopqrstuvwxyzàáâãçéêíóôõúü'
+    # symbols = "".join(sorted(set(" ".join(valid_data.transcription))))
 
     random.shuffle(filepaths_and_text)
-    train_cutoff = int(len(filepaths_and_text) * train_size)
+    train_cutoff = int(len(filepaths_and_text) * config.train_size)
     train_files = filepaths_and_text[:train_cutoff]
     test_files = filepaths_and_text[train_cutoff:]
     print(f"{len(train_files)} train files, {len(test_files)} test files")
 
-    trainset = VoiceDataset(train_files, dataset_dir, symbols, seed)
-    valset = VoiceDataset(test_files, dataset_dir, symbols, seed)
+    trainset = VoiceDataset(train_files, dataset_dir,
+                            config.symbols, config.seed)
+    valset = VoiceDataset(test_files, dataset_dir, config.symbols, config.seed)
     collate_fn = TextMelCollate()
 
     # Data loaders
     train_loader = DataLoader(
-        trainset, num_workers=4, sampler=None, batch_size=batch_size,
+        trainset, num_workers=4, sampler=None, batch_size=config.batch_size,
         pin_memory=True, collate_fn=collate_fn, shuffle=True,
     )
     val_loader = DataLoader(
-        valset, num_workers=4, sampler=None, batch_size=batch_size,
+        valset, num_workers=4, sampler=None, batch_size=config.batch_size,
         pin_memory=True, collate_fn=collate_fn, shuffle=True
     )
     print("Loaded data")
 
     # Training
-    # Load checkpoint if one exists
-
     model.train()
-    for epoch in range(1, epochs):
+    for epoch in range(initial_epoch, config.epochs):
         train_synthesizer_epoch(
             model,
             train_loader,
@@ -126,9 +132,18 @@ if __name__ == "__main__":
             iteration=iteration,
             output_directory=args.out,
             learning_rate=learning_rate,
-            grad_clip_thresh=grad_clip_thresh,
-            checkpoint_path=None,
-            iters_per_checkpoint=iters_per_checkpoint)
+            grad_clip_thresh=config.grad_clip_thresh,
+            iters_per_checkpoint=config.iters_per_checkpoint)
 
+        scheduler.step()
+        # Saving alignments
+        alignment_img = os.path.join(args.out, f"alignments_{epoch}.jpg")
+        save_alignments(
+            model,
+            alignment_img
+        )
+        im = plt.imread(alignment_img)
+        wandb.log({"img": [wandb.Image(im, caption="Alignments")]})
+        wandb.log({"epoch": epoch})
         print("Epoch: {}".format(epoch))
-        print(f"Progress - {epoch}/{epochs}")
+        print(f"Progress - {epoch}/{config.epochs}")

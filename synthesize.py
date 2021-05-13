@@ -44,8 +44,7 @@ def load_waveglow(waveglow_path):
 
 def generate_graph(alignments, filepath):
     data = alignments.float().data.cpu().numpy()[0].T
-    plt.imshow(data, aspect="auto", origin="lower", interpolation="none")
-    plt.savefig(filepath)
+    plt.imsave(filepath, data, aspect="auto", origin="lower", interpolation="none")
 
 
 def generate_audio(mel, waveglow, filepath, sample_rate=22050):
@@ -64,6 +63,14 @@ def text_to_sequence(text):
         return torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
     else:
         return torch.autograd.Variable(torch.from_numpy(sequence)).cpu().long()
+
+
+def save_alignments(model, text, filepath):
+    text = clean_text(text)
+    sequence = text_to_sequence(text)
+    _, _, _, alignments = model.inference(sequence)
+
+    generate_graph(alignments, filepath)
 
 
 def synthesize(model, waveglow_model, text, graph=None, audio=None):

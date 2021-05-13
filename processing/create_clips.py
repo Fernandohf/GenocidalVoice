@@ -58,13 +58,15 @@ def split_fragments(text_file, audio_file, data_out, init_uid):
                   float(sentence['dur']) * 1000)
         # Add 100ms silent around audio
         fragment = normalize(sound[start:end])
+        # Check audio length
+        if fragment.duration_seconds > 20:
+            break
         uid += 1
         str_id = "{:0>6}".format(uid)
         ids.append(str_id)
         transcriptions.append(sentence['text'])
         # Frame rate
         fragment = fragment.set_frame_rate(TARGET_SAMPLE_RATE).set_channels(1)
-
         fragment.export(os.path.join(data_out, "wav", str_id + ".wav"),
                         format="wav", bitrate=BIT_RATE, )
 

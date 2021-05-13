@@ -5,6 +5,7 @@ import glob
 import torch
 import numpy as np
 from sklearn.metrics import f1_score, accuracy_score
+import wandb
 
 
 def load_checkpoint(checkpoint_path, model, optimizer):
@@ -12,28 +13,33 @@ def load_checkpoint(checkpoint_path, model, optimizer):
     model.load_state_dict(checkpoint_dict["state_dict"])
     optimizer.load_state_dict(checkpoint_dict["optimizer"])
     iteration = checkpoint_dict["iteration"]
-    return model, optimizer, iteration
+    epoch = checkpoint_dict["epoch"]
+    learning_rate = checkpoint_dict["learning_rate"]
+    return model, optimizer, iteration, epoch, learning_rate
 
 
-def last_checkpoint(path):
-    checkpoints = {}
+def get_last_checkpoint(path):
+    last_epoch = 0
+    last_iteration = 0
+    last_checkpoint = None
     for checkpoint in glob.glob(path + "/*.pt"):
-        score = float(checkpoint.split("_")[-1].strip(".pt"))
-        checkpoints[checkpoint] = score
-    if len(checkpoints) > 0:
-        best = max(checkpoints, key=checkpoints.get)
-    else:
-        best = None
-    return best
+        epoch, iteration = map(int, checkpoint.strip(".pt").split("_")[1:])
+        if last_iteration < iteration and last_epoch <= epoch:
+            last_checkpoint = checkpoint
+            last_epoch = epoch
+            last_iteration = iteration
+
+    return last_checkpoint
 
 
-def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
+def save_checkpoint(model, optimizer, learning_rate, iteration, epoch, filepath):
     torch.save(
         {
             "iteration": iteration,
             "state_dict": model.state_dict(),
             "optimizer": optimizer.state_dict(),
             "learning_rate": learning_rate,
+            "epoch": epoch,
         },
         filepath,
     )
@@ -112,9 +118,9 @@ def test_synthesizer(model, val_loader, criterion, iteration):
             reduced_val_loss = loss.item()
             val_loss += reduced_val_loss
         val_loss = val_loss / (i + 1)
-
     model.train()
     print("Validation loss {}: {:9f}  ".format(iteration, val_loss))
+    wandb.log({"validation_loss": val_loss})
 
 
 def train_synthesizer_epoch(
@@ -128,9 +134,9 @@ def train_synthesizer_epoch(
     iteration,
     learning_rate=3.125e-5,
     grad_clip_thresh=1.0,
-    checkpoint_path=None,
     iters_per_checkpoint=1000,
 ):
+    model.train()
     for _, batch in enumerate(train_loader):
         start = time.perf_counter()
         for param_group in optimizer.param_groups:
@@ -158,12 +164,11 @@ def train_synthesizer_epoch(
         if iteration % iters_per_checkpoint == 0:
             test_synthesizer(model, val_loader, criterion, iteration)
             checkpoint_path = os.path.join(
-                output_directory, "checkpoint_{}".format(iteration))
+                output_directory, f"checkpoint_{epoch}_{iteration}.pt")
             save_checkpoint(model, optimizer, learning_rate,
-                            iteration, checkpoint_path)
+                            iteration, epoch, checkpoint_path)
             print(
-                "Saving model and optimizer state at iteration {} to {}".format(
-                    iteration, checkpoint_path)
+                f"Saving model and optimizer state at iteration {iteration} to {checkpoint_path}"
             )
 
         iteration += 1
@@ -173,5 +178,5 @@ def train_synthesizer_epoch(
         output_directory, "checkpoint_{}".format(iteration))
     save_checkpoint(model, optimizer, learning_rate,
                     iteration, checkpoint_path)
-    print("Saving model and optimizer state at iteration {} to {}".format(
-        iteration, checkpoint_path))
+    print(
+        "Saving model and optimizer at end of epoch {epoch}, iteration {iteration}")
