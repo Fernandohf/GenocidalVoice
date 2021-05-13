@@ -8,14 +8,15 @@ from sklearn.metrics import f1_score, accuracy_score
 import wandb
 
 
-def load_checkpoint(checkpoint_path, model, optimizer):
+def load_checkpoint(checkpoint_path, model, optimizer, sampler):
     checkpoint_dict = torch.load(checkpoint_path, map_location="cpu")
     model.load_state_dict(checkpoint_dict["state_dict"])
     optimizer.load_state_dict(checkpoint_dict["optimizer"])
+    sampler.set_state(checkpoint_dict["sampler"])
     iteration = checkpoint_dict["iteration"]
     epoch = checkpoint_dict["epoch"]
     learning_rate = checkpoint_dict["learning_rate"]
-    return model, optimizer, iteration, epoch, learning_rate
+    return model, optimizer, iteration, epoch, learning_rate, sampler
 
 
 def get_last_checkpoint(path):
@@ -32,7 +33,7 @@ def get_last_checkpoint(path):
     return last_checkpoint
 
 
-def save_checkpoint(model, optimizer, learning_rate, iteration, epoch, filepath):
+def save_checkpoint(model, optimizer, sampler, learning_rate, iteration, epoch, filepath):
     torch.save(
         {
             "iteration": iteration,
@@ -40,6 +41,7 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, epoch, filepath)
             "optimizer": optimizer.state_dict(),
             "learning_rate": learning_rate,
             "epoch": epoch,
+            "sampler": sampler.get_state(),
         },
         filepath,
     )
@@ -139,9 +141,6 @@ def train_synthesizer_epoch(
     model.train()
     for _, batch in enumerate(train_loader):
         start = time.perf_counter()
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = learning_rate
-
         model.zero_grad()
         x, y = model.parse_batch(batch)
         y_pred = model(x)
@@ -165,7 +164,7 @@ def train_synthesizer_epoch(
             test_synthesizer(model, val_loader, criterion, iteration)
             checkpoint_path = os.path.join(
                 output_directory, f"checkpoint_{epoch}_{iteration}.pt")
-            save_checkpoint(model, optimizer, learning_rate,
+            save_checkpoint(model, optimizer, train_loader.sampler, learning_rate,
                             iteration, epoch, checkpoint_path)
             print(
                 f"Saving model and optimizer state at iteration {iteration} to {checkpoint_path}"
@@ -176,7 +175,7 @@ def train_synthesizer_epoch(
     test_synthesizer(model, val_loader, criterion, iteration)
     checkpoint_path = os.path.join(
         output_directory, "checkpoint_{}".format(iteration))
-    save_checkpoint(model, optimizer, learning_rate,
+    save_checkpoint(model, optimizer, train_loader.sampler, learning_rate,
                     iteration, checkpoint_path)
     print(
         "Saving model and optimizer at end of epoch {epoch}, iteration {iteration}")
