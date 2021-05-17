@@ -37,5 +37,7 @@
 # References
 
 1. [Voice Cloning App](https://github.com/BenAAndrew/Voice-Cloning-App)
+
 2. [Nvidia - Waveglow]()
+
 3. [Nvidia - Tacotron]()

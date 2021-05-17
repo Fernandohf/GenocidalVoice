@@ -3,7 +3,6 @@ import argparse
 import os
 from tqdm import tqdm
 import pandas as pd
-from models.train import last_checkpoint
 import torch
 from torch.utils.data import DataLoader
 from models.classifier.model import GenocidalClassifier
@@ -11,7 +10,8 @@ from models.classifier.dataset import GenocidalPredictionDataset
 
 
 DATASET_PATH = 'data/datasets/ChihuahuaDoTrump'
-THRESH = .6
+MODEL_PATH = 'models/classifier/lastmodel.pt'
+THRESH = .4
 
 
 def valid_dataset(dataset_path, model_path, thresh=.5, min_words=3, device="cpu"):
@@ -65,9 +65,13 @@ if __name__ == '__main__':
         "--dataset",
         help="Folder with the dataset",
         default=DATASET_PATH)
+    parser.add_argument(
+        "--model",
+        help="Path to trained classifier model",
+        default=MODEL_PATH)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_path = last_checkpoint("checkpoint/classifier")
+    model_path = args.model
     metadata = valid_dataset(args.dataset, model_path, THRESH)
     metadata.to_csv(DATASET_PATH + "/metadata.csv")

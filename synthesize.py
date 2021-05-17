@@ -1,11 +1,11 @@
 import argparse
 import os
-import matplotlib.pyplot as plt
 import IPython.display as ipd
 from tacotron2_model import Tacotron2
 import torch
 import numpy as np
 from models.synthesizer.text_cleaning import clean_text
+import matplotlib.pyplot as plt
 import matplotlib
 
 matplotlib.use("Agg")
@@ -44,7 +44,10 @@ def load_waveglow(waveglow_path):
 
 def generate_graph(alignments, filepath):
     data = alignments.float().data.cpu().numpy()[0].T
-    plt.imsave(filepath, data, aspect="auto", origin="lower", interpolation="none")
+    plt.imshow(data, aspect="auto", origin="lower", interpolation="none")
+    plt.savefig(filepath)
+
+    # plt.imsave(filepath, data, origin="lower", interpolation="none")
 
 
 def generate_audio(mel, waveglow, filepath, sample_rate=22050):

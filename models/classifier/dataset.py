@@ -11,9 +11,10 @@ def prepare_audio(audio_file, resample=22050, n_mels=64):
     sound_tensor, sample_rate = torchaudio.load(os.path.normpath(audio_file),
                                                 normalize=True)
     # Resample audio to same format
-    resample_transform = torchaudio.transforms.Resample(
-        orig_freq=sample_rate, new_freq=resample)
-    sound_tensor = resample_transform(sound_tensor)
+    if sample_rate != resample:
+        resample_transform = torchaudio.transforms.Resample(
+            orig_freq=sample_rate, new_freq=resample)
+        sound_tensor = resample_transform(sound_tensor)
 
     # This will convert audio files with two channels into one
     sound_tensor = torch.mean(sound_tensor, dim=0, keepdim=True)

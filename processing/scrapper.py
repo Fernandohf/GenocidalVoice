@@ -4,7 +4,7 @@ import pandas as pd
 import download_youtube_subtitle.main as dys
 from youtube_dl import YoutubeDL
 
-VIDEOS_SOURCE = 'data/bolsoanta.csv'
+VIDEOS_SOURCE = 'data/ChihuahuaDoTrump.csv'
 OUTPUT = 'data/datasets/'
 
 
@@ -24,6 +24,8 @@ def download_files(videos, audio_out, text_out):
 
         except NameError:
             print("No caption available for this videos. Skipping...")
+        except Exception as e:
+            print(e)
 
 
 if __name__ == "__main__":
@@ -36,8 +38,10 @@ if __name__ == "__main__":
 
     # Garantes that the directories exist
     dataset_name = args.source.split("/")[-1].split(".")[0]
-    os.makedirs(args.out + dataset_name + "/raw/audio/", exist_ok=True)
-    os.makedirs(args.out + dataset_name + "/raw/text/", exist_ok=True)
+    text_out = args.out + dataset_name + "/raw/text/"
+    audio_out = args.out + dataset_name + "/raw/audio/"
+    os.makedirs(audio_out, exist_ok=True)
+    os.makedirs(text_out, exist_ok=True)
 
     # Load and combine video sources
     if os.path.isfile(args.source):
@@ -47,4 +51,4 @@ if __name__ == "__main__":
             f"No source files found! file {args.source} is missing")
 
     # Download files
-    download_files(videos.urls, args.out + "audio/", args.out + "text/")
+    download_files(videos.urls, audio_out, text_out)

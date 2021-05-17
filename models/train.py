@@ -25,7 +25,7 @@ def get_last_checkpoint(path):
     last_checkpoint = None
     for checkpoint in glob.glob(path + "/*.pt"):
         epoch, iteration = map(int, checkpoint.strip(".pt").split("_")[1:])
-        if last_iteration < iteration and last_epoch <= epoch:
+        if last_iteration <= iteration and last_epoch <= epoch:
             last_checkpoint = checkpoint
             last_epoch = epoch
             last_iteration = iteration
@@ -159,6 +159,7 @@ def train_synthesizer_epoch(
                 epoch, iteration, reduced_loss, grad_norm, duration
             )
         )
+        wandb.log({"train_loss": reduced_loss})
 
         if iteration % iters_per_checkpoint == 0:
             test_synthesizer(model, val_loader, criterion, iteration)
@@ -173,9 +174,11 @@ def train_synthesizer_epoch(
         iteration += 1
 
     test_synthesizer(model, val_loader, criterion, iteration)
+    # Reset iterations
     checkpoint_path = os.path.join(
-        output_directory, "checkpoint_{}".format(iteration))
+                output_directory, f"checkpointlast_{epoch}_{iteration}.pt")
     save_checkpoint(model, optimizer, train_loader.sampler, learning_rate,
-                    iteration, checkpoint_path)
+                    iteration, epoch, checkpoint_path)
+    iteration = 0
     print(
         "Saving model and optimizer at end of epoch {epoch}, iteration {iteration}")

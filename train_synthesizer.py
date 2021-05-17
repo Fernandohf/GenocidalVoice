@@ -1,6 +1,5 @@
 import os
 import torch
-import random
 import wandb
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -58,7 +57,6 @@ if __name__ == "__main__":
     # Set seed
     torch.manual_seed(config.seed)
     torch.cuda.manual_seed(config.seed)
-    random.seed(config.seed)
 
     # Load data
     dataset_dir = args.metadata.rsplit("/", 1)[0]
@@ -74,7 +72,6 @@ if __name__ == "__main__":
     # Check symbols
     config.symbols = ' abcdefghijklmnopqrstuvwxyzàáâãçéêíóôõúü'
     # symbols = "".join(sorted(set(" ".join(valid_data.transcription))))
-    random.shuffle(filepaths_and_text)
     train_cutoff = int(len(filepaths_and_text) * config.train_size)
     train_files = filepaths_and_text[:train_cutoff]
     test_files = filepaths_and_text[train_cutoff:]
@@ -110,7 +107,7 @@ if __name__ == "__main__":
         last_epoch = -1
     else:
         last_epoch = initial_epoch
-    scheduler = StepLR(optimizer, step_size=0, gamma=.5, last_epoch=last_epoch)
+    scheduler = StepLR(optimizer, step_size=50, gamma=.5, last_epoch=last_epoch)
     print("Loaded model")
 
     # Data loaders
@@ -126,7 +123,7 @@ if __name__ == "__main__":
 
     # Training
     model.train()
-    for epoch in range(initial_epoch + 1, config.epochs):
+    for epoch in range(initial_epoch, config.epochs):
         train_synthesizer_epoch(
             model,
             train_loader,
@@ -141,10 +138,12 @@ if __name__ == "__main__":
             iters_per_checkpoint=config.iters_per_checkpoint)
 
         scheduler.step()
+        iteration = 0
         # Saving alignments
-        alignment_img = os.path.join(args.out, f"alignments_{epoch}.jpg")
+        alignment_img = os.path.join(args.out, "alignments", f"epoch_{epoch}.jpg")
         save_alignments(
             model,
+            "Boa noite",
             alignment_img
         )
         im = plt.imread(alignment_img)
