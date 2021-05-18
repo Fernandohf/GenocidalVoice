@@ -25,10 +25,13 @@ def get_last_checkpoint(path):
     last_checkpoint = None
     for checkpoint in glob.glob(path + "/*.pt"):
         epoch, iteration = map(int, checkpoint.strip(".pt").split("_")[1:])
-        if last_iteration <= iteration and last_epoch <= epoch:
-            last_checkpoint = checkpoint
+        if epoch >= last_epoch:
             last_epoch = epoch
+            if iteration > last_iteration:
+                last_checkpoint = checkpoint
+                last_iteration = iteration
             last_iteration = iteration
+            last_checkpoint = checkpoint
 
     return last_checkpoint
 
@@ -109,7 +112,7 @@ def test_binary_classification(model, dataloader, device):
     return score
 
 
-def test_synthesizer(model, val_loader, criterion, iteration):
+def test_synthesizer(model, val_loader, criterion, iteration, console):
     model.eval()
     with torch.no_grad():
         val_loss = 0.0
@@ -121,7 +124,7 @@ def test_synthesizer(model, val_loader, criterion, iteration):
             val_loss += reduced_val_loss
         val_loss = val_loss / (i + 1)
     model.train()
-    print("Validation loss {}: {:9f}  ".format(iteration, val_loss))
+    console.log("Validation loss at iteration {}: {:9f}  ".format(iteration, val_loss))
     wandb.log({"validation_loss": val_loss})
 
 
@@ -134,6 +137,7 @@ def train_synthesizer_epoch(
     epoch,
     output_directory,
     iteration,
+    console,
     learning_rate=3.125e-5,
     grad_clip_thresh=1.0,
     iters_per_checkpoint=1000,
@@ -154,31 +158,31 @@ def train_synthesizer_epoch(
         optimizer.step()
 
         duration = time.perf_counter() - start
-        print(
-            "Status - [Epoch {}: Iteration {}] Train loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
+        console.log(
+            "[Epoch {:3d}: Iteration {:3d}] - [bold]Train loss[/bold] {:.6f} Grad Norm {:.6f} ({:.2f} s/it)".format(
                 epoch, iteration, reduced_loss, grad_norm, duration
             )
         )
         wandb.log({"train_loss": reduced_loss})
 
         if iteration % iters_per_checkpoint == 0:
-            test_synthesizer(model, val_loader, criterion, iteration)
+            test_synthesizer(model, val_loader, criterion, iteration, console)
             checkpoint_path = os.path.join(
                 output_directory, f"checkpoint_{epoch}_{iteration}.pt")
             save_checkpoint(model, optimizer, train_loader.sampler, learning_rate,
                             iteration, epoch, checkpoint_path)
-            print(
-                f"Saving model and optimizer state at iteration {iteration} to {checkpoint_path}"
+            console.log(
+                f"[bold]Checkpoint[/bold] - Epoch: {epoch}, Iteration: {iteration}, File: {checkpoint_path}"
             )
 
         iteration += 1
 
-    test_synthesizer(model, val_loader, criterion, iteration)
+    test_synthesizer(model, val_loader, criterion, iteration, console)
     # Reset iterations
     checkpoint_path = os.path.join(
                 output_directory, f"checkpointlast_{epoch}_{iteration}.pt")
     save_checkpoint(model, optimizer, train_loader.sampler, learning_rate,
                     iteration, epoch, checkpoint_path)
     iteration = 0
-    print(
-        "Saving model and optimizer at end of epoch {epoch}, iteration {iteration}")
+    console.log(
+        f"Saving checkpoint at end of epoch {epoch}")
